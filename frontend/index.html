@@ -8,6 +8,16 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Apply persisted theme (or system preference) before React loads
+      // to avoid a flash of the wrong theme.
+      try {
+        var t = localStorage.getItem('attendx-theme') || 'system';
+        var dark = t === 'dark' || (t === 'system' &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) document.documentElement.classList.add('dark');
+      } catch (e) { /* private mode: fall back to light */ }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
