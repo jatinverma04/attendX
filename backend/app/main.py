@@ -14,7 +14,7 @@ from typing import Annotated, Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
-from pymongo import ASCENDING, DESCENDING, MongoClient
+from pymongo import ASCENDING, DESCENDING, MongoClient, ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
 load_dotenv()
@@ -242,6 +242,27 @@ class PunchInIn(BaseModel):
         return self
 
 
+class PunchOutIn(BaseModel):
+    emp_code: str
+    punched_at: Optional[EpochMillis] = None
+
+
+class RegularizeIn(BaseModel):
+    status: Optional[str] = None
+    punch_in: Optional[EpochMillis] = None
+    punch_out: Optional[EpochMillis] = None
+    reason: str = Field(min_length=5, max_length=200)
+    regularized_by: str = Field(min_length=1, max_length=50)
+
+    @model_validator(mode="after")
+    def _check_status(self):
+        if self.status is not None and self.status not in (
+            "PRESENT", "ABSENT", "LEAVE", "WFH", "ON_DUTY"
+        ):
+            raise ValueError("invalid status")
+        return self
+
+
 # --------------------------------------------------------------------------- #
 # Endpoints provided
 # --------------------------------------------------------------------------- #
@@ -352,10 +373,168 @@ def list_attendance(
     return {"items": items, "total": total, "page": page, "page_size": page_size}
 
 
+@app.post("/attendance/punch-out", status_code=200)
+def punch_out(body: PunchOutIn):
+    emp = db.employees.find_one({"emp_code": body.emp_code})
+    if emp is None:
+        raise HTTPException(404, "unknown employee")
+    ts = ms_to_dt(body.punched_at) if body.punched_at is not None else \
+        datetime.now(UTC).replace(microsecond=0)
+    ts_utc = _as_utc(ts)
+    rec = db.attendance_logs.find_one(
+        {"emp_code": body.emp_code, "punch_in": {"$lte": ts_utc, "$ne": None}},
+        sort=[("punch_in", DESCENDING)],
+    )
+    if rec is None:
+        raise HTTPException(404, "no punch-in found")
+    pi = _as_utc(rec["punch_in"]) if isinstance(rec.get("punch_in"), datetime) else None
+    if pi is None:
+        raise HTTPException(404, "no punch-in found")
+    if ts_utc <= pi:
+        raise HTTPException(422, "punched_at must be after punch_in")
+    if (ts_utc - pi).total_seconds() > 24 * 3600:
+        raise HTTPException(422, "punched_at more than 24 hours after punch_in")
+    if rec.get("punch_out") is not None:
+        raise HTTPException(409, "already punched out")
+    shift_start = emp.get("shift_start", "09:30")
+    shift_end = emp.get("shift_end", "18:30")
+    work_hours = compute_work_hours(pi, ts_utc)
+    overtime = compute_overtime(ts_utc, shift_end, rec["date"], shift_start)
+    half_day = work_hours < 4.50
+    updated = db.attendance_logs.find_one_and_update(
+        {"_id": rec["_id"], "punch_out": None},
+        {"$set": {
+            "punch_out": ts_utc,
+            "work_hours": work_hours,
+            "overtime_minutes": overtime,
+            "half_day": half_day,
+        }},
+        return_document=ReturnDocument.AFTER,
+    )
+    if updated is None:
+        cur = db.attendance_logs.find_one({"_id": rec["_id"]})
+        if cur is not None and cur.get("punch_out") is not None:
+            raise HTTPException(409, "already punched out")
+        raise HTTPException(404, "no punch-in found")
+    return serialize_attendance(updated)
+
+
+@app.patch("/attendance/{emp_code}/{date}", status_code=200)
+def regularize_attendance(emp_code: str, date: str, body: RegularizeIn):
+    _validate_date_str(date, "date")
+    emp = db.employees.find_one({"emp_code": emp_code})
+    if emp is None:
+        raise HTTPException(404, "unknown employee")
+    rec = db.attendance_logs.find_one({"emp_code": emp_code, "date": date})
+    if rec is None:
+        raise HTTPException(404, "no record for that date")
+    shift_start = emp.get("shift_start", "09:30")
+    shift_end = emp.get("shift_end", "18:30")
+
+    old_status = rec.get("status")
+    old_pi = rec.get("punch_in")
+    old_po = rec.get("punch_out")
+    old_pi = old_pi if isinstance(old_pi, datetime) else None
+    old_po = old_po if isinstance(old_po, datetime) else None
+    old_wh = rec.get("work_hours")
+    old_late = rec.get("late_minutes", 0) if rec.get("late_minutes") is not None else 0
+    old_ot = rec.get("overtime_minutes", 0) if rec.get("overtime_minutes") is not None else 0
+    old_hd = bool(rec.get("half_day", False))
+    hist = rec.get("history") or []
+
+    new_status = body.status if body.status is not None else old_status
+    pi_supplied = body.punch_in is not None
+    po_supplied = body.punch_out is not None
+
+    if new_status in ("ABSENT", "LEAVE"):
+        if pi_supplied or po_supplied:
+            raise HTTPException(422, "punch times not allowed with ABSENT/LEAVE")
+        new_pi, new_po = None, None
+    else:
+        new_pi = ms_to_dt(body.punch_in) if pi_supplied else old_pi
+        new_po = ms_to_dt(body.punch_out) if po_supplied else old_po
+        if new_pi is None:
+            raise HTTPException(422, "presence status requires punch_in")
+        if attendance_date_for(_as_utc(new_pi), shift_start, shift_end) != date:
+            raise HTTPException(422, "punch_in must stay on the record's date")
+        if new_po is not None:
+            new_pi_utc, new_po_utc = _as_utc(new_pi), _as_utc(new_po)
+            if new_po_utc <= new_pi_utc:
+                raise HTTPException(422, "punch_out must be after punch_in")
+            if (new_po_utc - new_pi_utc).total_seconds() > 24 * 3600:
+                raise HTTPException(422, "punch_out more than 24 hours after punch_in")
+
+    if new_status in ("ABSENT", "LEAVE"):
+        new_late, new_wh, new_ot, new_hd = 0, None, 0, False
+    elif new_pi is None:
+        new_late, new_wh, new_ot, new_hd = 0, None, 0, False
+    else:
+        new_late = compute_late_minutes(_as_utc(new_pi), shift_start)
+        if new_po is None:
+            new_wh, new_ot, new_hd = None, 0, False
+        else:
+            new_wh = compute_work_hours(_as_utc(new_pi), _as_utc(new_po))
+            new_ot = compute_overtime(_as_utc(new_po), shift_end, date, shift_start)
+            new_hd = new_wh < 4.50
+
+    def _ms(v):
+        return dt_to_ms(v) if isinstance(v, datetime) else None
+
+    changes: dict = {}
+    if new_status != old_status:
+        changes["status"] = {"from": old_status, "to": new_status}
+    if _ms(new_pi) != _ms(old_pi):
+        changes["punch_in"] = {"from": _ms(old_pi), "to": _ms(new_pi)}
+    if _ms(new_po) != _ms(old_po):
+        changes["punch_out"] = {"from": _ms(old_po), "to": _ms(new_po)}
+    if new_wh != old_wh:
+        changes["work_hours"] = {"from": old_wh, "to": new_wh}
+    if new_late != old_late:
+        changes["late_minutes"] = {"from": old_late, "to": new_late}
+    if new_ot != old_ot:
+        changes["overtime_minutes"] = {"from": old_ot, "to": new_ot}
+    if new_hd != old_hd:
+        changes["half_day"] = {"from": old_hd, "to": new_hd}
+    if not changes:
+        raise HTTPException(422, "request changes nothing")
+
+    now = datetime.now(UTC).replace(microsecond=0)
+    entry_changes: dict = {}
+    for k, v in changes.items():
+        if k in ("punch_in", "punch_out"):
+            entry_changes[k] = {
+                "from": ms_to_dt(v["from"]) if v["from"] is not None else None,
+                "to": ms_to_dt(v["to"]) if v["to"] is not None else None,
+            }
+        else:
+            entry_changes[k] = v
+    entry = {"at": now, "by": body.regularized_by, "reason": body.reason,
+             "changes": entry_changes}
+
+    filt: dict = {"_id": rec["_id"], f"history.{len(hist)}": {"$exists": False}}
+    filt["status"] = {"$eq": old_status}
+    filt["punch_in"] = {"$eq": old_pi} if old_pi is not None else None
+    filt["punch_out"] = {"$eq": old_po} if old_po is not None else None
+    updated = db.attendance_logs.find_one_and_update(
+        filt,
+        {"$set": {
+            "status": new_status,
+            "punch_in": _as_utc(new_pi) if new_pi is not None else None,
+            "punch_out": _as_utc(new_po) if new_po is not None else None,
+            "work_hours": new_wh,
+            "late_minutes": new_late,
+            "overtime_minutes": new_ot,
+            "half_day": new_hd,
+        }, "$push": {"history": entry}},
+        return_document=ReturnDocument.AFTER,
+    )
+    if updated is None:
+        raise HTTPException(409, "concurrent modification, retry")
+    return serialize_attendance(updated)
+
+
 # --------------------------------------------------------------------------- #
 # TODO - the rest of the contract (see openapi.yaml):
-#   POST  /attendance/punch-out
-#   PATCH /attendance/{emp_code}/{date}
 #   GET   /analytics/employees/{emp_code}/monthly
 #   GET   /analytics/departments/summary
 #   GET   /analytics/leaderboard/late
