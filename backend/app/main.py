@@ -4,6 +4,8 @@ Employee Attendance & Analytics API - STARTER
 Run:  uvicorn app.main:app --port 8000
 Env:  MONGO_URI, MONGO_DB (a local .env is loaded for convenience)
 """
+import calendar as _calendar
+import json as _json
 import os
 import re
 from datetime import date as date_cls
@@ -11,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Annotated, Optional
 
+from bson import json_util
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
@@ -537,8 +540,6 @@ def regularize_attendance(emp_code: str, date: str, body: RegularizeIn):
 # --------------------------------------------------------------------------- #
 # Analytics (Phase C) - aggregation pipelines, stored values are authoritative
 # --------------------------------------------------------------------------- #
-import calendar as _calendar
-
 MONTH_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 PRESENCE = ["PRESENT", "WFH", "ON_DUTY"]
 
@@ -597,54 +598,26 @@ def _late_flag_expr() -> dict:
     return {"$cond": [{"$gt": [{"$ifNull": ["$late_minutes", 0]}, 0]}, 1, 0]}
 
 
-@app.get("/analytics/employees/{emp_code}/monthly")
-def employee_monthly(
-    emp_code: str,
-    month: str = Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
-):
-    emp = db.employees.find_one({"emp_code": emp_code})
-    if emp is None:
-        raise HTTPException(404, "unknown employee")
-    m_start, m_next, m_end = _month_bounds(month)
-    pipe = [
-        {"$match": {"emp_code": emp_code, "date": {"$gte": m_start, "$lt": m_next}}},
+def _monthly_pipeline(emp_code: str, m_start: str, m_next: str) -> list:
+    return [
+        {"$match": {"emp_code": emp_code,
+                    "date": {"$gte": m_start, "$lt": m_next}}},
         {"$group": {
             "_id": None,
             "present_days": {"$sum": _present_w_expr()},
-            "leave_days": {"$sum": {"$cond": [{"$eq": ["$status", "LEAVE"]}, 1, 0]}},
+            "leave_days": {"$sum": {"$cond": [
+                {"$eq": ["$status", "LEAVE"]}, 1, 0]}},
             "late_count": {"$sum": _late_flag_expr()},
-            "total_late_minutes": {"$sum": {"$ifNull": ["$late_minutes", 0]}},
-            "total_overtime_minutes": {"$sum": {"$ifNull": ["$overtime_minutes", 0]}},
+            "total_late_minutes": {"$sum": {
+                "$ifNull": ["$late_minutes", 0]}},
+            "total_overtime_minutes": {"$sum": {
+                "$ifNull": ["$overtime_minutes", 0]}},
         }},
     ]
-    rows = list(db.attendance_logs.aggregate(pipe))
-    agg = rows[0] if rows else {}
-    working_days = _working_days(month, emp.get("joined_on", m_start))
-    present_days = float(agg.get("present_days", 0.0))
-    attendance_pct = _round2(present_days / working_days * 100) if working_days else None
-    return {
-        "emp_code": emp_code,
-        "month": month,
-        "working_days": working_days,
-        "present_days": present_days,
-        "leave_days": int(agg.get("leave_days", 0)),
-        "late_count": int(agg.get("late_count", 0)),
-        "total_late_minutes": int(agg.get("total_late_minutes", 0)),
-        "total_overtime_minutes": int(agg.get("total_overtime_minutes", 0)),
-        "attendance_pct": attendance_pct,
-    }
 
 
-@app.get("/analytics/departments/summary")
-def department_summary(
-    month: str = Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
-    department: Optional[str] = None,
-):
-    m_start, m_next, m_end = _month_bounds(month)
-    emp_match: dict = {"joined_on": {"$lte": m_end}}
-    if department:
-        emp_match["department"] = department
-    pipe = [
+def _dept_summary_pipeline(emp_match: dict, m_start: str, m_next: str) -> list:
+    return [
         {"$match": emp_match},
         {"$lookup": {
             "from": "attendance_logs",
@@ -683,31 +656,10 @@ def department_summary(
         }},
         {"$sort": {"_id": ASCENDING}},
     ]
-    items = []
-    for r in db.employees.aggregate(pipe):
-        if not r.get("emp_codes"):
-            continue
-        wh_n = int(r.get("wh_n", 0))
-        items.append({
-            "department": r["_id"],
-            "headcount": len(r["emp_codes"]),
-            "present_days": float(r.get("present_days", 0.0)),
-            "avg_work_hours": _round2(Decimal(str(r["wh_sum"])) / wh_n) if wh_n else None,
-            "late_count": int(r.get("late_count", 0)),
-            "total_late_minutes": int(r.get("total_late_minutes", 0)),
-            "leave_count": int(r.get("leave_count", 0)),
-            "on_duty_count": int(r.get("on_duty_count", 0)),
-        })
-    return {"month": month, "items": items}
 
 
-@app.get("/analytics/leaderboard/late")
-def late_leaderboard(
-    month: str = Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
-    limit: int = Query(10, ge=1, le=50),
-    department: Optional[str] = None,
-):
-    m_start, m_next, _ = _month_bounds(month)
+def _leaderboard_pipeline(m_start: str, m_next: str,
+                          department: Optional[str], limit: int) -> list:
     stages: list = [
         {"$match": {"date": {"$gte": m_start, "$lt": m_next}}},
         {"$group": {
@@ -726,8 +678,7 @@ def late_leaderboard(
         {"$unwind": "$emp"},
     ]
     if department:
-        stages.append({"$match": {"emp.emp_code": {"$exists": True},
-                                  "emp.department": department}})
+        stages.append({"$match": {"emp.department": department}})
     stages += [
         {"$setWindowFields": {
             "sortBy": {"total": DESCENDING},
@@ -745,32 +696,12 @@ def late_leaderboard(
             "late_count": "$late_count",
         }},
     ]
-    items = list(db.attendance_logs.aggregate(stages))
-    return {"month": month, "items": items}
+    return stages
 
 
-@app.get("/analytics/departments/{department}/trend")
-def department_trend(
-    department: str,
-    frm: str = Query(alias="from"),
-    to: str = Query(),
-):
-    _validate_date_str(frm, "from")
-    _validate_date_str(to, "to")
-    if to < frm:
-        raise HTTPException(422, "to < from")
-    d0, d1 = date_cls.fromisoformat(frm), date_cls.fromisoformat(to)
-    if (d1 - d0).days > 91:
-        raise HTTPException(422, "range exceeds 92 days")
-    emps = list(db.employees.find({"department": department},
-                                  {"_id": 0, "emp_code": 1, "joined_on": 1}))
-    if not emps:
-        raise HTTPException(404, "unknown department")
-    codes = [e["emp_code"] for e in emps]
-    joined = [e.get("joined_on", "0000-00-00") for e in emps]
-    from_dt = datetime(d0.year, d0.month, d0.day)
-    to_excl = datetime(d1.year, d1.month, d1.day) + timedelta(days=1)
-    pipe = [
+def _trend_pipeline(codes: list, joined: list, frm: str, to: str,
+                    from_dt: datetime, to_excl: datetime) -> list:
+    return [
         {"$match": {"emp_code": {"$in": codes},
                     "date": {"$gte": frm, "$lte": to}}},
         {"$group": {
@@ -836,6 +767,98 @@ def department_trend(
                 {"$toDouble": "$moving_avg_7d"}]},
         }},
     ]
+
+
+@app.get("/analytics/employees/{emp_code}/monthly")
+def employee_monthly(
+    emp_code: str,
+    month: str = Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
+):
+    emp = db.employees.find_one({"emp_code": emp_code})
+    if emp is None:
+        raise HTTPException(404, "unknown employee")
+    m_start, m_next, m_end = _month_bounds(month)
+    pipe = _monthly_pipeline(emp_code, m_start, m_next)
+    rows = list(db.attendance_logs.aggregate(pipe))
+    agg = rows[0] if rows else {}
+    working_days = _working_days(month, emp.get("joined_on", m_start))
+    present_days = float(agg.get("present_days", 0.0))
+    attendance_pct = _round2(present_days / working_days * 100) if working_days else None
+    return {
+        "emp_code": emp_code,
+        "month": month,
+        "working_days": working_days,
+        "present_days": present_days,
+        "leave_days": int(agg.get("leave_days", 0)),
+        "late_count": int(agg.get("late_count", 0)),
+        "total_late_minutes": int(agg.get("total_late_minutes", 0)),
+        "total_overtime_minutes": int(agg.get("total_overtime_minutes", 0)),
+        "attendance_pct": attendance_pct,
+    }
+
+
+@app.get("/analytics/departments/summary")
+def department_summary(
+    month: str = Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
+    department: Optional[str] = None,
+):
+    m_start, m_next, m_end = _month_bounds(month)
+    emp_match: dict = {"joined_on": {"$lte": m_end}}
+    if department:
+        emp_match["department"] = department
+    pipe = _dept_summary_pipeline(emp_match, m_start, m_next)
+    items = []
+    for r in db.employees.aggregate(pipe):
+        if not r.get("emp_codes"):
+            continue
+        wh_n = int(r.get("wh_n", 0))
+        items.append({
+            "department": r["_id"],
+            "headcount": len(r["emp_codes"]),
+            "present_days": float(r.get("present_days", 0.0)),
+            "avg_work_hours": _round2(Decimal(str(r["wh_sum"])) / wh_n) if wh_n else None,
+            "late_count": int(r.get("late_count", 0)),
+            "total_late_minutes": int(r.get("total_late_minutes", 0)),
+            "leave_count": int(r.get("leave_count", 0)),
+            "on_duty_count": int(r.get("on_duty_count", 0)),
+        })
+    return {"month": month, "items": items}
+
+
+@app.get("/analytics/leaderboard/late")
+def late_leaderboard(
+    month: str = Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
+    limit: int = Query(10, ge=1, le=50),
+    department: Optional[str] = None,
+):
+    m_start, m_next, _ = _month_bounds(month)
+    stages = _leaderboard_pipeline(m_start, m_next, department, limit)
+    items = list(db.attendance_logs.aggregate(stages))
+    return {"month": month, "items": items}
+
+
+@app.get("/analytics/departments/{department}/trend")
+def department_trend(
+    department: str,
+    frm: str = Query(alias="from"),
+    to: str = Query(),
+):
+    _validate_date_str(frm, "from")
+    _validate_date_str(to, "to")
+    if to < frm:
+        raise HTTPException(422, "to < from")
+    d0, d1 = date_cls.fromisoformat(frm), date_cls.fromisoformat(to)
+    if (d1 - d0).days > 91:
+        raise HTTPException(422, "range exceeds 92 days")
+    emps = list(db.employees.find({"department": department},
+                                  {"_id": 0, "emp_code": 1, "joined_on": 1}))
+    if not emps:
+        raise HTTPException(404, "unknown department")
+    codes = [e["emp_code"] for e in emps]
+    joined = [e.get("joined_on", "0000-00-00") for e in emps]
+    from_dt = datetime(d0.year, d0.month, d0.day)
+    to_excl = datetime(d1.year, d1.month, d1.day) + timedelta(days=1)
+    pipe = _trend_pipeline(codes, joined, frm, to, from_dt, to_excl)
     rows = list(db.attendance_logs.aggregate(pipe))
     return {"department": department, "items": [
         {"date": r["date"], "is_working_day": bool(r["is_working_day"]),
@@ -861,9 +884,6 @@ def explain_endpoint(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
-    from bson import json_util
-    import json as _json
-
     def _explain_find(coll: str, filt: dict, sort: dict,
                       skip: int = 0, lim: int = 0) -> dict:
         cmd: dict = {"find": coll, "filter": filt, "sort": sort}
@@ -913,21 +933,7 @@ def explain_endpoint(
             raise HTTPException(422, "emp_code and month are required")
         _validate_month(month)
         m_start, m_next, _ = _month_bounds(month)
-        pipe = [
-            {"$match": {"emp_code": emp_code,
-                        "date": {"$gte": m_start, "$lt": m_next}}},
-            {"$group": {
-                "_id": None,
-                "present_days": {"$sum": _present_w_expr()},
-                "leave_days": {"$sum": {"$cond": [
-                    {"$eq": ["$status", "LEAVE"]}, 1, 0]}},
-                "late_count": {"$sum": _late_flag_expr()},
-                "total_late_minutes": {"$sum": {
-                    "$ifNull": ["$late_minutes", 0]}},
-                "total_overtime_minutes": {"$sum": {
-                    "$ifNull": ["$overtime_minutes", 0]}},
-            }},
-        ]
+        pipe = _monthly_pipeline(emp_code, m_start, m_next)
         return {"endpoint": endpoint, "collection": "attendance_logs",
                 "explain": _ser(_explain_agg("attendance_logs", pipe))}
 
@@ -940,21 +946,7 @@ def explain_endpoint(
         emp_match: dict = {"joined_on": {"$lte": m_end}}
         if department:
             emp_match["department"] = department
-        pipe = [
-            {"$match": emp_match},
-            {"$lookup": {
-                "from": "attendance_logs",
-                "let": {"ec": "$emp_code"},
-                "pipeline": [
-                    {"$match": {"$expr": {"$and": [
-                        {"$eq": ["$emp_code", "$$ec"]},
-                        {"$gte": ["$date", m_start]},
-                        {"$lt": ["$date", m_next]},
-                    ]}}},
-                ],
-                "as": "logs",
-            }},
-        ]
+        pipe = _dept_summary_pipeline(emp_match, m_start, m_next)
         return {"endpoint": endpoint, "collection": "employees",
                 "explain": _ser(_explain_agg("employees", pipe))}
 
@@ -963,15 +955,7 @@ def explain_endpoint(
             raise HTTPException(422, "month is required")
         _validate_month(month)
         m_start, m_next, _ = _month_bounds(month)
-        pipe = [
-            {"$match": {"date": {"$gte": m_start, "$lt": m_next}}},
-            {"$group": {
-                "_id": "$emp_code",
-                "total": {"$sum": {"$ifNull": ["$late_minutes", 0]}},
-                "late_count": {"$sum": _late_flag_expr()},
-            }},
-            {"$match": {"total": {"$gt": 0}}},
-        ]
+        pipe = _leaderboard_pipeline(m_start, m_next, department, limit)
         return {"endpoint": endpoint, "collection": "attendance_logs",
                 "explain": _ser(_explain_agg("attendance_logs", pipe))}
 
@@ -987,30 +971,16 @@ def explain_endpoint(
         if (d1 - d0).days > 91:
             raise HTTPException(422, "range exceeds 92 days")
         emps = list(db.employees.find({"department": department},
-                                      {"_id": 0, "emp_code": 1}))
+                                      {"_id": 0, "emp_code": 1, "joined_on": 1}))
         if not emps:
             raise HTTPException(404, "unknown department")
         codes = [e["emp_code"] for e in emps]
-        pipe = [
-            {"$match": {"emp_code": {"$in": codes},
-                        "date": {"$gte": frm, "$lte": to}}},
-            {"$group": {"_id": "$date",
-                        "present_count": {"$sum": 1},
-                        "late_count": {"$sum": 1}}},
-            {"$addFields": {"day": {"$dateFromString": {
-                "dateString": "$_id"}}}},
-            {"$densify": {"field": "day", "range": {
-                "step": 1, "unit": "day",
-                "bounds": [datetime(d0.year, d0.month, d0.day),
-                           datetime(d1.year, d1.month, d1.day)
-                           + timedelta(days=1)]}}},
-        ]
+        joined = [e.get("joined_on", "0000-00-00") for e in emps]
+        pipe = _trend_pipeline(
+            codes, joined, frm, to,
+            datetime(d0.year, d0.month, d0.day),
+            datetime(d1.year, d1.month, d1.day) + timedelta(days=1))
         return {"endpoint": endpoint, "collection": "attendance_logs",
                 "explain": _ser(_explain_agg("attendance_logs", pipe))}
 
     raise HTTPException(422, "unknown endpoint")
-
-
-# --------------------------------------------------------------------------- #
-# TODO - the rest of the contract (see openapi.yaml):
-# --------------------------------------------------------------------------- #
