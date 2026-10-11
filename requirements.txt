@@ -1,0 +1,3 @@
+# Single dependency list lives in backend/requirements.txt; this file
+# only includes it so `pip install -r requirements.txt` works from the repo root.
+-r backend/requirements.txt
