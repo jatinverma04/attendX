@@ -29,18 +29,18 @@ import { useTheme } from './theme.js';
 
 /* ---------- shared styles ---------- */
 const inputCls =
-  'h-10 w-full rounded-lg border border-stone-300 bg-white px-3 text-sm text-stone-800 placeholder:text-stone-400 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:placeholder:text-stone-500';
+  'h-10 w-full rounded-lg border border-line2 bg-white px-3 text-sm text-ink placeholder:text-mist dark:border-edg dark:bg-elev dark:text-bone dark:placeholder:text-fog';
 const btnPrimary =
-  'inline-flex h-10 items-center gap-2 rounded-lg bg-sage-600 px-4 text-sm font-medium text-white hover:bg-sage-700 disabled:opacity-50';
+  'inline-flex h-10 items-center gap-2 rounded-lg bg-olive-600 px-4 text-sm font-medium text-white hover:bg-olive-700 disabled:opacity-50';
 const btnGhost =
-  'inline-flex h-10 items-center gap-2 rounded-lg border border-stone-300 bg-white px-4 text-sm font-medium text-stone-700 hover:bg-stone-100 disabled:opacity-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800';
+  'inline-flex h-10 items-center gap-2 rounded-lg border border-line2 bg-white px-4 text-sm font-medium text-smoke hover:bg-cream disabled:opacity-50 dark:border-edg dark:bg-elev dark:text-bone dark:hover:bg-elev2';
 const btnSm =
-  'inline-flex h-8 items-center gap-1 rounded-md border border-stone-300 bg-white px-2.5 text-xs font-medium text-stone-700 hover:bg-stone-100 disabled:opacity-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800';
+  'inline-flex h-8 items-center gap-1 rounded-md border border-line2 bg-white px-2.5 text-xs font-medium text-smoke hover:bg-cream disabled:opacity-50 dark:border-edg dark:bg-elev dark:text-bone dark:hover:bg-elev2';
 const tabCls = (active) =>
   `inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
     active
-      ? 'bg-sage-100 text-sage-700 dark:bg-sage-700/20 dark:text-sage-200'
-      : 'text-stone-600 hover:bg-stone-200/60 dark:text-stone-300 dark:hover:bg-stone-800'
+      ? 'bg-olive-100 text-olive-700 dark:bg-olive-700/20 dark:text-olive-200'
+      : 'text-fog hover:bg-wash/60 dark:text-ash dark:hover:bg-elev2'
   }`;
 
 const STATUS_STYLE = {
@@ -54,7 +54,7 @@ const STATUS_STYLE = {
 function StatusBadge({ value }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLE[value] || 'bg-stone-200 text-stone-700 dark:bg-stone-700 dark:text-stone-200'}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLE[value] || 'bg-wash text-smoke dark:bg-elev2 dark:text-bone'}`}
     >
       {value}
     </span>
@@ -82,7 +82,7 @@ function useAsync() {
 function StateBanner({ loading, error, empty, emptyText }) {
   if (loading)
     return (
-      <p className="flex items-center gap-2 rounded-lg border border-stone-200 px-4 py-3 text-sm text-stone-500 dark:border-stone-800 dark:text-stone-400">
+      <p className="flex items-center gap-2 rounded-lg border border-line px-4 py-3 text-sm text-fog dark:border-edg dark:text-ash">
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Loading…
       </p>
     );
@@ -94,7 +94,7 @@ function StateBanner({ loading, error, empty, emptyText }) {
     );
   if (empty)
     return (
-      <p className="flex items-center gap-2 rounded-lg border border-dashed border-stone-300 px-4 py-3 text-sm text-stone-500 dark:border-stone-700 dark:text-stone-400">
+      <p className="flex items-center gap-2 rounded-lg border border-dashed border-line2 px-4 py-3 text-sm text-fog dark:border-edg dark:text-ash">
         <Inbox className="h-4 w-4" aria-hidden /> {emptyText || 'No records found.'}
       </p>
     );
@@ -104,7 +104,7 @@ function StateBanner({ loading, error, empty, emptyText }) {
 function Pager({ page, pageSize, total, onPage }) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
   return (
-    <div className="flex items-center gap-3 text-sm text-stone-500 dark:text-stone-400">
+    <div className="flex items-center gap-3 text-sm text-fog dark:text-ash">
       <button type="button" className={btnSm} disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label="Previous page">
         <ChevronLeft className="h-4 w-4" aria-hidden /> Prev
       </button>
@@ -118,7 +118,7 @@ function Pager({ page, pageSize, total, onPage }) {
 
 function Field({ label, children }) {
   return (
-    <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-stone-500 dark:text-stone-400">
+    <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-fog dark:text-ash">
       {label}
       {children}
     </label>
@@ -127,10 +127,10 @@ function Field({ label, children }) {
 
 function Card({ title, icon: Icon, children, action }) {
   return (
-    <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5 dark:border-stone-800 dark:bg-stone-900">
+    <section className="rounded-xl border border-line bg-white p-4 shadow-sm sm:p-5 dark:border-edg dark:bg-elev">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-stone-800 dark:text-stone-100">
-          {Icon && <Icon className="h-4 w-4 text-sage-600 dark:text-sage-200" aria-hidden />}
+        <h2 className="flex items-center gap-2 text-base font-semibold text-ink dark:text-bone">
+          {Icon && <Icon className="h-4 w-4 text-olive-600 dark:text-olive-200" aria-hidden />}
           {title}
         </h2>
         {action}
@@ -141,12 +141,12 @@ function Card({ title, icon: Icon, children, action }) {
 }
 
 function TableWrap({ children }) {
-  return <div className="overflow-x-auto rounded-lg border border-stone-200 dark:border-stone-800">{children}</div>;
+  return <div className="overflow-x-auto rounded-lg border border-line dark:border-edg">{children}</div>;
 }
 
 const thCls =
-  'whitespace-nowrap bg-stone-50 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-stone-500 dark:bg-stone-800/60 dark:text-stone-400';
-const tdCls = 'whitespace-nowrap px-3 py-2 text-sm text-stone-700 dark:text-stone-200';
+  'whitespace-nowrap bg-wash px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-fog dark:bg-elev2/60 dark:text-ash';
+const tdCls = 'whitespace-nowrap px-3 py-2 text-sm text-smoke dark:text-bone';
 
 /* ---------------- Employees ---------------- */
 function Employees() {
@@ -198,8 +198,8 @@ function Employees() {
                 <thead><tr><th className={thCls}>Code</th><th className={thCls}>Name</th><th className={thCls}>Email</th><th className={thCls}>Dept</th><th className={thCls}>Shift</th><th className={thCls}>Joined</th></tr></thead>
                 <tbody>
                   {items.map((x) => (
-                    <tr key={x.emp_code} className="border-t border-stone-200 hover:bg-stone-50 dark:border-stone-800 dark:hover:bg-stone-800/50">
-                      <td className={tdCls}><code className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-xs dark:bg-stone-800">{x.emp_code}</code></td>
+                    <tr key={x.emp_code} className="border-t border-line hover:bg-wash dark:border-edg dark:hover:bg-elev2/50">
+                      <td className={tdCls}><code className="rounded bg-cream px-1.5 py-0.5 font-mono text-xs dark:bg-elev2">{x.emp_code}</code></td>
                       <td className={tdCls}>{x.name}</td><td className={tdCls}>{x.email}</td>
                       <td className={tdCls}>{x.department}</td><td className={tdCls}>{x.shift_start}–{x.shift_end}</td><td className={tdCls}>{x.joined_on}</td>
                     </tr>
@@ -295,9 +295,9 @@ function Attendance() {
                 <thead><tr><th className={thCls}>Date</th><th className={thCls}>Code</th><th className={thCls}>Status</th><th className={thCls}>In (IST)</th><th className={thCls}>Out (IST)</th><th className={thCls}>Hrs</th><th className={thCls}>Late</th><th className={thCls}>OT</th><th className={thCls}>½</th><th className={thCls}><span className="sr-only">Actions</span></th></tr></thead>
                 <tbody>
                   {items.map((x) => (
-                    <tr key={`${x.emp_code}${x.date}`} className="border-t border-stone-200 hover:bg-stone-50 dark:border-stone-800 dark:hover:bg-stone-800/50">
+                    <tr key={`${x.emp_code}${x.date}`} className="border-t border-line hover:bg-wash dark:border-edg dark:hover:bg-elev2/50">
                       <td className={tdCls}>{x.date}</td>
-                      <td className={tdCls}><code className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-xs dark:bg-stone-800">{x.emp_code}</code></td>
+                      <td className={tdCls}><code className="rounded bg-cream px-1.5 py-0.5 font-mono text-xs dark:bg-elev2">{x.emp_code}</code></td>
                       <td className={tdCls}><StatusBadge value={x.status} /></td>
                       <td className={tdCls}>{fmtMs(x.punch_in)}</td><td className={tdCls}>{fmtMs(x.punch_out)}</td>
                       <td className={tdCls}>{x.work_hours ?? '—'}</td>
@@ -391,9 +391,9 @@ function Punch() {
           <TableWrap>
             <table className="w-full border-collapse">
               <thead><tr><th className={thCls}>Action</th><th className={thCls}>Date</th><th className={thCls}>Code</th><th className={thCls}>Status</th><th className={thCls}>In</th><th className={thCls}>Out</th><th className={thCls}>Hrs</th><th className={thCls}>Late</th><th className={thCls}>OT</th></tr></thead>
-              <tbody><tr className="border-t border-stone-200 dark:border-stone-800">
+              <tbody><tr className="border-t border-line dark:border-edg">
                 <td className={tdCls}>{result.kind}</td><td className={tdCls}>{result.row.date}</td>
-                <td className={tdCls}><code className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-xs dark:bg-stone-800">{result.row.emp_code}</code></td>
+                <td className={tdCls}><code className="rounded bg-cream px-1.5 py-0.5 font-mono text-xs dark:bg-elev2">{result.row.emp_code}</code></td>
                 <td className={tdCls}><StatusBadge value={result.row.status} /></td>
                 <td className={tdCls}>{fmtMs(result.row.punch_in)}</td><td className={tdCls}>{fmtMs(result.row.punch_out)}</td>
                 <td className={tdCls}>{result.row.work_hours ?? '—'}</td><td className={tdCls}>{result.row.late_minutes}</td><td className={tdCls}>{result.row.overtime_minutes}</td>
@@ -428,9 +428,9 @@ function Monthly() {
       {data && !loading && !error && (
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {['working_days', 'present_days', 'leave_days', 'late_count', 'total_late_minutes', 'total_overtime_minutes', 'attendance_pct'].map((k) => (
-            <div key={k} className="rounded-xl border border-stone-200 bg-white p-3 dark:border-stone-800 dark:bg-stone-900">
-              <dt className="text-xs text-stone-500 dark:text-stone-400">{k}</dt>
-              <dd className="text-2xl font-semibold text-stone-800 dark:text-stone-100">{data[k] ?? '—'}</dd>
+            <div key={k} className="rounded-xl border border-line bg-white p-3 dark:border-edg dark:bg-elev">
+              <dt className="text-xs text-fog dark:text-ash">{k}</dt>
+              <dd className="text-2xl font-semibold text-ink dark:text-bone">{data[k] ?? '—'}</dd>
             </div>
           ))}
         </dl>
@@ -463,7 +463,7 @@ function Departments() {
             <thead><tr><th className={thCls}>Dept</th><th className={thCls}>Headcount</th><th className={thCls}>Present</th><th className={thCls}>Avg hrs</th><th className={thCls}>Late n</th><th className={thCls}>Late min</th><th className={thCls}>Leave</th><th className={thCls}>On duty</th></tr></thead>
             <tbody>
               {items.map((x) => (
-                <tr key={x.department} className="border-t border-stone-200 hover:bg-stone-50 dark:border-stone-800 dark:hover:bg-stone-800/50">
+                <tr key={x.department} className="border-t border-line hover:bg-wash dark:border-edg dark:hover:bg-elev2/50">
                   <td className={tdCls}>{x.department}</td><td className={tdCls}>{x.headcount}</td><td className={tdCls}>{x.present_days}</td>
                   <td className={tdCls}>{x.avg_work_hours ?? '—'}</td><td className={tdCls}>{x.late_count}</td>
                   <td className={tdCls}>{x.total_late_minutes}</td><td className={tdCls}>{x.leave_count}</td><td className={tdCls}>{x.on_duty_count}</td>
@@ -504,13 +504,13 @@ function Leaderboard() {
             <thead><tr><th className={thCls}>Rank</th><th className={thCls}>Code</th><th className={thCls}>Name</th><th className={thCls}>Dept</th><th className={thCls}>Late min</th><th className={thCls}>Late n</th><th className={thCls}><span className="sr-only">Share</span></th></tr></thead>
             <tbody>
               {items.map((x) => (
-                <tr key={x.emp_code} className="border-t border-stone-200 hover:bg-stone-50 dark:border-stone-800 dark:hover:bg-stone-800/50">
+                <tr key={x.emp_code} className="border-t border-line hover:bg-wash dark:border-edg dark:hover:bg-elev2/50">
                   <td className={tdCls}>#{x.rank}</td>
-                  <td className={tdCls}><code className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-xs dark:bg-stone-800">{x.emp_code}</code></td>
+                  <td className={tdCls}><code className="rounded bg-cream px-1.5 py-0.5 font-mono text-xs dark:bg-elev2">{x.emp_code}</code></td>
                   <td className={tdCls}>{x.name}</td><td className={tdCls}>{x.department}</td>
                   <td className={tdCls}><span className="font-medium text-amber-700 dark:text-amber-400">{x.total_late_minutes}</span></td>
                   <td className={tdCls}>{x.late_count}</td>
-                  <td className={tdCls}><div className="h-2 w-24 rounded bg-stone-200 dark:bg-stone-700"><div className="h-2 rounded bg-amber-600/70 dark:bg-amber-500/70" style={{ width: `${(x.total_late_minutes / max) * 100}%` }} /></div></td>
+                  <td className={tdCls}><div className="h-2 w-24 rounded bg-wash dark:bg-elev2"><div className="h-2 rounded bg-amber-600/70 dark:bg-amber-500/70" style={{ width: `${(x.total_late_minutes / max) * 100}%` }} /></div></td>
                 </tr>
               ))}
             </tbody>
@@ -548,11 +548,11 @@ function Trend() {
             <thead><tr><th className={thCls}>Date</th><th className={thCls}>Workday</th><th className={thCls}>Headcount</th><th className={thCls}>Present</th><th className={thCls}>Late</th><th className={thCls}>Rate</th><th className={thCls}>7d avg</th><th className={thCls}><span className="sr-only">Share</span></th></tr></thead>
             <tbody>
               {items.map((x) => (
-                <tr key={x.date} className={`border-t border-stone-200 hover:bg-stone-50 dark:border-stone-800 dark:hover:bg-stone-800/50 ${x.is_working_day ? '' : 'opacity-60'}`}>
+                <tr key={x.date} className={`border-t border-line hover:bg-wash dark:border-edg dark:hover:bg-elev2/50 ${x.is_working_day ? '' : 'opacity-60'}`}>
                   <td className={tdCls}>{x.date}</td><td className={tdCls}>{x.is_working_day ? 'yes' : 'no'}</td><td className={tdCls}>{x.headcount}</td>
                   <td className={tdCls}>{x.present_count}</td><td className={tdCls}>{x.late_count}</td>
                   <td className={tdCls}>{x.attendance_rate ?? '—'}</td><td className={tdCls}>{x.moving_avg_7d ?? '—'}</td>
-                  <td className={tdCls}><div className="h-2 w-24 rounded bg-stone-200 dark:bg-stone-700"><div className="h-2 rounded bg-sage-500" style={{ width: `${((x.attendance_rate ?? 0) / max) * 100}%` }} /></div></td>
+                  <td className={tdCls}><div className="h-2 w-24 rounded bg-wash dark:bg-elev2"><div className="h-2 rounded bg-olive-500" style={{ width: `${((x.attendance_rate ?? 0) / max) * 100}%` }} /></div></td>
                 </tr>
               ))}
             </tbody>
@@ -607,7 +607,7 @@ function ThemeToggle() {
       onClick={cycle}
       aria-label={label}
       title={label}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-300 bg-white text-stone-600 hover:bg-stone-100 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300 dark:hover:bg-stone-800"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line2 bg-white text-fog hover:bg-cream dark:border-edg dark:bg-elev dark:text-ash dark:hover:bg-elev2"
     >
       <Icon className="h-4 w-4" aria-hidden />
     </button>
@@ -623,22 +623,21 @@ export default function App() {
   const connected = health === 'ok';
 
   return (
-    <div className="min-h-screen bg-stone-100 text-stone-800 dark:bg-stone-950 dark:text-stone-200">
+    <div className="min-h-screen bg-cream text-ink dark:bg-coal dark:text-bone">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:text-sm">
         Skip to content
       </a>
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col md:flex-row">
+      <div className="flex min-h-screen flex-col md:flex-row">
         {/* Sidebar / top bar */}
-        <aside className="border-b border-stone-200 bg-white md:flex md:w-60 md:shrink-0 md:flex-col md:border-b-0 md:border-r dark:border-stone-800 dark:bg-stone-900">
-          <div className="flex items-center justify-between gap-2 p-4">
+        <aside className="border-b border-line bg-side md:flex md:w-64 md:shrink-0 md:flex-col md:border-b-0 md:border-r dark:border-edg dark:bg-elev">
+          <div className="flex items-center gap-2 p-4">
             <div className="flex min-w-0 items-center gap-2.5">
               <img src="/attendx.svg" alt="AttendX logo" width="34" height="34" className="shrink-0" />
               <div className="min-w-0">
-                <p className="truncate text-base font-semibold text-stone-900 dark:text-stone-50">AttendX</p>
-                <p className="truncate text-xs text-stone-500 dark:text-stone-400">Attendance Management</p>
+                <p className="truncate text-base font-semibold text-ink dark:text-bone">AttendX</p>
+                <p className="truncate text-xs text-fog dark:text-ash">Attendance Management</p>
               </div>
             </div>
-            <div className="md:hidden"><ThemeToggle /></div>
           </div>
           <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-col md:gap-1 md:px-3 md:pb-3" aria-label="Primary">
             {NAV.map(({ id, icon: Icon }) => (
@@ -647,30 +646,28 @@ export default function App() {
               </button>
             ))}
           </nav>
-          <div className="mt-auto hidden p-4 md:block">
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <span className="text-xs capitalize text-stone-500 dark:text-stone-400">Theme</span>
-            </div>
-          </div>
         </aside>
 
         {/* Main column */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 bg-white/70 px-4 py-3 sm:px-6 dark:border-stone-800 dark:bg-stone-900/60">
+          <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-side/70 px-4 py-3 sm:px-6 lg:px-8 dark:border-edg dark:bg-elev/60">
             <div className="min-w-0">
-              <h1 className="truncate text-lg font-semibold text-stone-900 dark:text-stone-50">{tab}</h1>
-              <p className="truncate text-xs text-stone-500 dark:text-stone-400">{NAV.find((n) => n.id === tab)?.blurb}</p>
+              <h1 className="truncate text-lg font-semibold text-ink dark:text-bone">{tab}</h1>
+              <p className="truncate text-xs text-fog dark:text-ash">{NAV.find((n) => n.id === tab)?.blurb}</p>
             </div>
-            <p
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${connected ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'}`}
-              role="status"
-            >
-              {connected ? <Wifi className="h-3.5 w-3.5" aria-hidden /> : <WifiOff className="h-3.5 w-3.5" aria-hidden />}
-              API {connected ? 'connected' : 'unreachable'}
-            </p>
+            <div className="flex shrink-0 items-center gap-2">
+              <p
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${connected ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'}`}
+                role="status"
+              >
+                {connected ? <Wifi className="h-3.5 w-3.5" aria-hidden /> : <WifiOff className="h-3.5 w-3.5" aria-hidden />}
+                <span className="hidden sm:inline">API {connected ? 'connected' : 'unreachable'}</span>
+                <span className="sm:hidden">{connected ? 'on' : 'off'}</span>
+              </p>
+              <ThemeToggle />
+            </div>
           </header>
-          <main id="main" className="flex-1 px-4 py-4 sm:px-6 sm:py-6">
+          <main id="main" className="flex-1 px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
             {tab === 'Employees' && <Employees />}
             {tab === 'Attendance' && <Attendance />}
             {tab === 'Punch' && <Punch />}
