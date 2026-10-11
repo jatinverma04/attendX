@@ -1,0 +1,15 @@
+@"
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets
+.env
+.env.*
+
+# Frontend
+node_modules/
+dist/
+"@ | Out-File -FilePath .gitignore -Encoding utf8
