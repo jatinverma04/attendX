@@ -16,6 +16,7 @@ from typing import Annotated, Optional
 from bson import json_util
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, model_validator
 from pymongo import ASCENDING, DESCENDING, MongoClient, ReturnDocument
 from pymongo.errors import DuplicateKeyError
@@ -29,6 +30,15 @@ IST = timezone(timedelta(hours=5, minutes=30))
 UTC = timezone.utc
 
 app = FastAPI(title="Employee Attendance & Analytics API", version="2.0.0")
+
+# Browser dashboards (Vite dev server, previews) call this API cross-origin.
+# The API uses no cookies or auth headers, so a wildcard origin is safe.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 EPOCH_MIN = 100000000000
 EPOCH_MAX = 4102444800000

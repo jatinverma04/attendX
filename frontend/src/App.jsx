@@ -462,7 +462,10 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <h1>AttendX</h1>
+        <div className="brand">
+          <img src="/attendx.svg" alt="AttendX logo" width="36" height="36" />
+          <h1>AttendX</h1>
+        </div>
         <p className="health">API: {health === 'ok' ? 'connected' : health || 'checking…'}</p>
       </header>
       <nav className="tabs">
