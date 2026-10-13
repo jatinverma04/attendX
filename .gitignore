@@ -11,3 +11,7 @@ venv/
 node_modules/
 dist/
 build/
+
+# Test artifacts
+frontend/test-results/
+frontend/playwright-report/

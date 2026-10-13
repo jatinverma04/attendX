@@ -24,7 +24,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
-import { api, apiErrorMessage, fmtMs, localToMs } from './api.js';
+import { api, apiErrorMessage, fmtMs, localToMs, msToLocal } from './api.js';
 import { useTheme } from './theme.js';
 
 /* ---------- shared styles ---------- */
@@ -161,10 +161,15 @@ function Employees() {
 
   const load = useCallback((p = 1, d = dept) => {
     setPage(p);
+    const dd = (d || '').trim();
     return run(async () => {
-      const r = await api.listEmployees({ department: d || undefined, page: p, page_size: pageSize });
+      const r = await api.listEmployees({ department: dd || undefined, page: p, page_size: pageSize });
       setItems(r.items);
       setTotal(r.total);
+      return r;
+    }).then((r) => {
+      if (r === undefined) { setItems([]); setTotal(0); } // don't show stale rows on error
+      return r;
     });
   }, [dept, run]);
 
@@ -245,6 +250,10 @@ function Attendance() {
       const r = await api.listAttendance({ ...f, page: p, page_size: pageSize });
       setItems(r.items);
       setTotal(r.total);
+      return r;
+    }).then((r) => {
+      if (r === undefined) { setItems([]); setTotal(0); } // don't show stale rows on error
+      return r;
     });
   }, [f, run]);
 
@@ -252,7 +261,7 @@ function Attendance() {
 
   const openReg = (row) => {
     setReg({ emp_code: row.emp_code, date: row.date });
-    setRform({ status: '', punch_in: localToMs(row.punch_in), punch_out: localToMs(row.punch_out), reason: '', regularized_by: '' });
+    setRform({ status: '', punch_in: msToLocal(row.punch_in), punch_out: msToLocal(row.punch_out), reason: '', regularized_by: '' });
     setRmsg('');
   };
 
