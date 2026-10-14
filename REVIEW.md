@@ -1,6 +1,6 @@
 # REVIEW.md
 
-PROBLEM_STATEMENT.docx found at `backend/PROBLEM_STATEMENT.docx`; no requirement had to be guessed.
+PROBLEM_STATEMENT.docx found at `PROBLEM_STATEMENT.docx`; no requirement had to be guessed.
 
 | # | Where (function / line) | What is wrong | How you'd notice it (test, input, or symptom) | How you fixed it |
 |---|---|---|---|---|

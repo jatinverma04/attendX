@@ -2,7 +2,7 @@
 
 Requires MongoDB reachable via MONGO_URI (falls back to the local .env)
 and test deps:  pip install -r requirements-test.txt
-Run from backend/:  python -m pytest tests/ -q
+Run from the repository root:  python -m pytest tests/ -q
 """
 import concurrent.futures as cf
 import os
