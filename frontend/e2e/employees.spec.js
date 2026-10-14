@@ -26,6 +26,9 @@ test('search Sales shows only Sales with filtered total', async ({ page }) => {
   const rows = await rowTexts(page);
   expect(rows).toHaveLength(2);
   for (const r of rows) expect(r).toContain('Sales');
+  const all = rows.join('\n');
+  expect(all).toContain('Neha Iyer');
+  expect(all).toContain('Rohit Das');
   await expect(page.locator('main').getByText('2 total')).toBeVisible();
 });
 
@@ -49,6 +52,21 @@ test('lowercase query respects exact-match contract', async ({ page }) => {
   await searchDept(page, 'sales');
   expect(await rowTexts(page)).toHaveLength(0);
   await expect(page.locator('main').getByText('No records found.')).toBeVisible();
+});
+
+test('uppercase query respects exact-match contract', async ({ page }) => {
+  await searchDept(page, 'SALES');
+  expect(await rowTexts(page)).toHaveLength(0);
+  await expect(page.locator('main').getByText('No records found.')).toBeVisible();
+});
+
+test('whitespace around Sales is trimmed and both employees show', async ({ page }) => {
+  await searchDept(page, '   Sales   ');
+  const rows = await rowTexts(page);
+  expect(rows).toHaveLength(2);
+  const all = rows.join('\n');
+  expect(all).toContain('Neha Iyer');
+  expect(all).toContain('Rohit Das');
 });
 
 test('failed search shows error and clears stale rows', async ({ page }) => {

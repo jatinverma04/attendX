@@ -479,3 +479,60 @@ def test_analytics_execute_as_mongo_aggregations(qaux, client):
     assert "attendance_logs" in names and "employees" in names, names
     for name, pipe in agg_calls:
         assert any("$group" in stage for stage in pipe), (name, pipe)
+
+
+def test_department_filter_is_exact_and_case_sensitive(seed, client):
+    """Contract (openapi.yaml listEmployees, DATA_MODEL.md): the department
+    filter is an exact, case-sensitive match. Pin case variants, whitespace,
+    empty and unknown inputs so the behaviour cannot drift unnoticed."""
+    specs = [("EMP8001", "Neha Iyer", "Sales"),
+             ("EMP8002", "Rohit Das", "Sales"),
+             ("EMP8003", "Asha Rao", "Engineering"),
+             ("EMP8004", "Vikram Shah", "Engineering")]
+
+    def q(dep):
+        r = client.get("/employees", params={"department": dep,
+                                             "page_size": 100})
+        assert r.status_code == 200
+        return r.json()
+
+    try:
+        for code, name, dept in specs:
+            seed.employees.insert_one({
+                "emp_code": code, "name": name,
+                "email": f"{code.lower()}@x.com", "department": dept,
+                "shift_start": "09:30", "shift_end": "18:30",
+                "joined_on": "2026-07-01",
+                "created_at": datetime(2026, 7, 1, tzinfo=U),
+            })
+
+        exact = q("Sales")
+        assert exact["total"] == 2
+        assert [x["name"] for x in exact["items"]] == ["Neha Iyer",
+                                                      "Rohit Das"]
+        assert all("_id" not in x for x in exact["items"])
+        assert q("sales")["total"] == 0
+        assert q("SALES")["total"] == 0
+
+        eng = q("Engineering")
+        assert eng["total"] == 2
+        assert [x["name"] for x in eng["items"]] == ["Asha Rao",
+                                                    "Vikram Shah"]
+
+        # Exact means exact: no whitespace normalisation at the API.
+        assert q(" Sales ")["total"] == 0
+        assert q("NoSuchDept") == {"items": [], "total": 0, "page": 1,
+                                   "page_size": 100}
+        # Empty string behaves like an omitted filter.
+        all_rows = client.get("/employees", params={"page_size": 100}).json()
+        assert q("")["total"] == all_rows["total"]
+
+        # total, pagination and emp_code ordering stay correct under a filter.
+        p2 = client.get("/employees", params={"department": "Sales",
+                                              "page": 2,
+                                              "page_size": 1}).json()
+        assert (p2["total"], p2["page"], len(p2["items"])) == (2, 2, 1)
+        assert p2["items"][0]["emp_code"] == "EMP8002"
+    finally:
+        seed.employees.delete_many(
+            {"emp_code": {"$in": [c for c, _, _ in specs]}})
