@@ -8,7 +8,7 @@ FastAPI + MongoDB service. All application code is `app/main.py`.
 pip install -r requirements.txt
 cp .env.example .env   # set MONGO_URI and MONGO_DB
 python sample_seed.py  # optional sample data
-uvicorn app.main:app --port 8000
+python -m uvicorn app.main:app --port 8000
 ```
 
 ## Environment

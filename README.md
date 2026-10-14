@@ -22,7 +22,7 @@ Optional sample data, then start (repository root):
 
 ```bash
 python backend/sample_seed.py
-uvicorn app.main:app --port 8000
+python -m uvicorn app.main:app --port 8000
 ```
 
 `GET /health` returns `{"status": "ok"}` once MongoDB answers its ping.

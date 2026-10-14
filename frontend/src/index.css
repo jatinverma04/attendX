@@ -7,33 +7,33 @@
   --font-mono: ui-monospace, Consolas, monospace;
 
   /* Warm neutrals (light) */
-  --color-cream: #f2f2ef;    /* page background */
-  --color-side: #e8e8e3;     /* sidebar / top strip */
-  --color-wash: #ecece6;     /* subtle fills, thead, tracks */
-  --color-ink: #292929;     /* primary text */
-  --color-smoke: #43453f;   /* secondary emphasis text */
-  --color-fog: #62665e;     /* muted secondary text */
-  --color-mist: #9a9d93;    /* placeholders */
-  --color-line: #dadad4;    /* soft borders */
-  --color-line2: #c6c6b8;   /* input borders */
+  --color-cream: #faf9f6;    /* page background */
+  --color-wash: #f1efe9;     /* subtle fills: table heads, hovers, chips */
+  --color-ink: #252525;      /* primary text */
+  --color-smoke: #454545;    /* secondary emphasis text */
+  --color-fog: #666666;      /* secondary text */
+  --color-mist: #767676;     /* placeholders */
+  --color-line: #e7e2dd;     /* borders and dividers */
+  --color-line2: #d8d1c9;    /* input borders */
 
   /* Charcoal neutrals (dark) */
-  --color-coal: #191a18;    /* page background */
-  --color-elev: #222420;    /* elevated surfaces */
-  --color-elev2: #2c2f29;   /* fills, tracks */
-  --color-bone: #f0f0ea;    /* primary text */
-  --color-ash: #a3a69b;     /* muted secondary text */
-  --color-edg: #34372e;     /* subtle borders */
+  --color-coal: #1b1b1b;     /* page background */
+  --color-elev: #242424;     /* elevated surfaces */
+  --color-elev2: #2f2f2f;    /* fills, tracks */
+  --color-bone: #f2f2f2;     /* primary text */
+  --color-ash: #a6a6a6;      /* muted secondary text */
+  --color-edg: #3a3a3a;      /* subtle borders */
 
-  /* Muted olive accent */
-  --color-olive-100: #e7e8d9;
-  --color-olive-200: #ccceb1;
-  --color-olive-500: #737a55;
-  --color-olive-600: #737a55;
-  --color-olive-700: #5c6143;
+  /* Warm orange accent */
+  --color-brand-100: #f4e5da;  /* selected / active background */
+  --color-brand-200: #efc5a9;  /* accent text on dark surfaces */
+  --color-brand-500: #d97745;  /* accent */
+  --color-brand-600: #d97745;  /* primary buttons */
+  --color-brand-700: #b95f32;  /* accent hover */
+  --color-brand-900: #8f4726;  /* accent text on light surfaces */
 }
 
-/* Base page + focus visibility (applies in both themes via utilities below) */
+/* Page base + focus ring (shared by both themes) */
 html {
   color-scheme: light;
   scrollbar-gutter: stable;
@@ -55,6 +55,6 @@ html.dark body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-olive-500);
+  outline: 2px solid var(--color-brand-500);
   outline-offset: 2px;
 }

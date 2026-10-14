@@ -127,11 +127,14 @@ def _shift_end_ist(date_str: str, shift_start: str, shift_end: str) -> datetime:
     return dt
 
 
-def compute_late_minutes(punch_in: datetime, shift_start: str) -> int:
+def compute_late_minutes(punch_in: datetime, shift_start: str,
+                         date_str: str) -> int:
     punch_utc = _truncate_seconds(_as_utc(punch_in))
     punch_ist = punch_utc.astimezone(IST)
-    h, m = _parse_hm(shift_start)
-    start = punch_ist.replace(hour=h, minute=m, second=0, microsecond=0)
+    # Anchor at the record's shift-start instant, not the punch's own calendar
+    # day: an overnight shift's post-midnight punch belongs to the previous
+    # day's 22:00 start (R2 counts minutes since that shift_start).
+    start = _shift_start_ist(date_str, shift_start)
     diff = (punch_ist - start).total_seconds()
     if diff <= 600:
         return 0
@@ -335,7 +338,8 @@ def punch_in(body: PunchInIn):
         "punch_in": _as_utc(ts),
         "punch_out": None,
         "work_hours": None,
-        "late_minutes": compute_late_minutes(ts, emp.get("shift_start", "09:30")),
+        "late_minutes": compute_late_minutes(
+            ts, emp.get("shift_start", "09:30"), d),
         "overtime_minutes": 0,
         "half_day": False,
         "history": [],
@@ -483,7 +487,7 @@ def regularize_attendance(emp_code: str, date: str, body: RegularizeIn):
     elif new_pi is None:
         new_late, new_wh, new_ot, new_hd = 0, None, 0, False
     else:
-        new_late = compute_late_minutes(_as_utc(new_pi), shift_start)
+        new_late = compute_late_minutes(_as_utc(new_pi), shift_start, date)
         if new_po is None:
             new_wh, new_ot, new_hd = None, 0, False
         else:
@@ -583,10 +587,6 @@ def _round2(x) -> float:
     return float(Decimal(str(x)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
-def _round4(x) -> float:
-    return float(Decimal(str(x)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP))
-
-
 def _dow_expr(date_field: str = "$date") -> dict:
     return {"$dayOfWeek": {"$dateFromString": {"dateString": date_field}}}
 
@@ -658,7 +658,10 @@ def _dept_summary_pipeline(emp_match: dict, m_start: str, m_next: str) -> list:
             "emp_codes": {"$addToSet": "$emp_code"},
             "present_days": {"$sum": {"$ifNull": ["$logs.present_w", 0.0]}},
             "wh_sum": {"$sum": {"$ifNull": ["$logs.wh", 0.0]}},
-            "wh_n": {"$sum": {"$cond": [{"$ne": ["$logs.wh", None]}, 1, 0]}},
+            # Count only real records with a value: a log-less employee's
+            # unwind row has no $logs at all and must not dilute the mean.
+            "wh_n": {"$sum": {"$cond": [
+                {"$ne": [{"$ifNull": ["$logs.wh", None]}, None]}, 1, 0]}},
             "late_count": {"$sum": {"$ifNull": ["$logs.late_flag", 0]}},
             "total_late_minutes": {"$sum": {"$ifNull": ["$logs.late_m", 0]}},
             "leave_count": {"$sum": {"$ifNull": ["$logs.is_leave", 0]}},

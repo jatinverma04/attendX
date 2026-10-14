@@ -1,16 +1,17 @@
-# React + Vite
+# AttendX frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + Vite dashboard for the AttendX API.
 
-Currently, two official plugins are available:
+```bash
+npm install
+npm run dev        # http://localhost:5173 (API expected on :8000)
+npm run build      # production bundle in dist/
+npm run lint
+npm run test:e2e   # Playwright suite; needs the API running on :8000
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+`VITE_API_BASE` overrides the API base URL (defaults to `http://127.0.0.1:8000`).
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Theme: Light is the default for first-time visitors; the header button cycles
+Light → Dark → System and the choice is persisted in `localStorage`
+(`attendx-theme`). Tokens live in `src/index.css`, the hook in `src/theme.js`.

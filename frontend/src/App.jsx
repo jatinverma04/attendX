@@ -29,17 +29,17 @@ import { useTheme } from './theme.js';
 
 /* ---------- shared styles ---------- */
 const inputCls =
-  'h-10 w-full rounded-lg border border-line2 bg-white px-3 text-sm text-ink placeholder:text-mist dark:border-edg dark:bg-elev dark:text-bone dark:placeholder:text-fog';
+  'h-10 w-full rounded-lg border border-line2 bg-white px-3 text-sm text-ink placeholder:text-mist dark:border-edg dark:bg-elev dark:text-bone dark:placeholder:text-ash';
 const btnPrimary =
-  'inline-flex h-10 items-center gap-2 rounded-lg bg-olive-600 px-4 text-sm font-medium text-white hover:bg-olive-700 disabled:opacity-50';
+  'inline-flex h-10 items-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50';
 const btnGhost =
-  'inline-flex h-10 items-center gap-2 rounded-lg border border-line2 bg-white px-4 text-sm font-medium text-smoke hover:bg-cream disabled:opacity-50 dark:border-edg dark:bg-elev dark:text-bone dark:hover:bg-elev2';
+  'inline-flex h-10 items-center gap-2 rounded-lg border border-line2 bg-white px-4 text-sm font-medium text-smoke hover:bg-wash disabled:opacity-50 dark:border-edg dark:bg-elev dark:text-bone dark:hover:bg-elev2';
 const btnSm =
-  'inline-flex h-8 items-center gap-1 rounded-md border border-line2 bg-white px-2.5 text-xs font-medium text-smoke hover:bg-cream disabled:opacity-50 dark:border-edg dark:bg-elev dark:text-bone dark:hover:bg-elev2';
+  'inline-flex h-8 items-center gap-1 rounded-md border border-line2 bg-white px-2.5 text-xs font-medium text-smoke hover:bg-wash disabled:opacity-50 dark:border-edg dark:bg-elev dark:text-bone dark:hover:bg-elev2';
 const tabCls = (active) =>
   `inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
     active
-      ? 'bg-olive-100 text-olive-700 dark:bg-olive-700/20 dark:text-olive-200'
+      ? 'bg-brand-100 text-brand-900 dark:bg-brand-500/20 dark:text-brand-200'
       : 'text-fog hover:bg-wash/60 dark:text-ash dark:hover:bg-elev2'
   }`;
 
@@ -130,7 +130,7 @@ function Card({ title, icon: Icon, children, action }) {
     <section className="rounded-xl border border-line bg-white p-4 shadow-sm sm:p-5 dark:border-edg dark:bg-elev">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-base font-semibold text-ink dark:text-bone">
-          {Icon && <Icon className="h-4 w-4 text-olive-600 dark:text-olive-200" aria-hidden />}
+          {Icon && <Icon className="h-4 w-4 text-brand-500 dark:text-brand-200" aria-hidden />}
           {title}
         </h2>
         {action}
@@ -204,7 +204,7 @@ function Employees() {
                 <tbody>
                   {items.map((x) => (
                     <tr key={x.emp_code} className="border-t border-line hover:bg-wash dark:border-edg dark:hover:bg-elev2/50">
-                      <td className={tdCls}><code className="rounded bg-cream px-1.5 py-0.5 font-mono text-xs dark:bg-elev2">{x.emp_code}</code></td>
+                      <td className={tdCls}><code className="rounded bg-wash px-1.5 py-0.5 font-mono text-xs dark:bg-elev2">{x.emp_code}</code></td>
                       <td className={tdCls}>{x.name}</td><td className={tdCls}>{x.email}</td>
                       <td className={tdCls}>{x.department}</td><td className={tdCls}>{x.shift_start}–{x.shift_end}</td><td className={tdCls}>{x.joined_on}</td>
                     </tr>
@@ -306,7 +306,7 @@ function Attendance() {
                   {items.map((x) => (
                     <tr key={`${x.emp_code}${x.date}`} className="border-t border-line hover:bg-wash dark:border-edg dark:hover:bg-elev2/50">
                       <td className={tdCls}>{x.date}</td>
-                      <td className={tdCls}><code className="rounded bg-cream px-1.5 py-0.5 font-mono text-xs dark:bg-elev2">{x.emp_code}</code></td>
+                      <td className={tdCls}><code className="rounded bg-wash px-1.5 py-0.5 font-mono text-xs dark:bg-elev2">{x.emp_code}</code></td>
                       <td className={tdCls}><StatusBadge value={x.status} /></td>
                       <td className={tdCls}>{fmtMs(x.punch_in)}</td><td className={tdCls}>{fmtMs(x.punch_out)}</td>
                       <td className={tdCls}>{x.work_hours ?? '—'}</td>
@@ -402,7 +402,7 @@ function Punch() {
               <thead><tr><th className={thCls}>Action</th><th className={thCls}>Date</th><th className={thCls}>Code</th><th className={thCls}>Status</th><th className={thCls}>In</th><th className={thCls}>Out</th><th className={thCls}>Hrs</th><th className={thCls}>Late</th><th className={thCls}>OT</th></tr></thead>
               <tbody><tr className="border-t border-line dark:border-edg">
                 <td className={tdCls}>{result.kind}</td><td className={tdCls}>{result.row.date}</td>
-                <td className={tdCls}><code className="rounded bg-cream px-1.5 py-0.5 font-mono text-xs dark:bg-elev2">{result.row.emp_code}</code></td>
+                <td className={tdCls}><code className="rounded bg-wash px-1.5 py-0.5 font-mono text-xs dark:bg-elev2">{result.row.emp_code}</code></td>
                 <td className={tdCls}><StatusBadge value={result.row.status} /></td>
                 <td className={tdCls}>{fmtMs(result.row.punch_in)}</td><td className={tdCls}>{fmtMs(result.row.punch_out)}</td>
                 <td className={tdCls}>{result.row.work_hours ?? '—'}</td><td className={tdCls}>{result.row.late_minutes}</td><td className={tdCls}>{result.row.overtime_minutes}</td>
@@ -515,7 +515,7 @@ function Leaderboard() {
               {items.map((x) => (
                 <tr key={x.emp_code} className="border-t border-line hover:bg-wash dark:border-edg dark:hover:bg-elev2/50">
                   <td className={tdCls}>#{x.rank}</td>
-                  <td className={tdCls}><code className="rounded bg-cream px-1.5 py-0.5 font-mono text-xs dark:bg-elev2">{x.emp_code}</code></td>
+                  <td className={tdCls}><code className="rounded bg-wash px-1.5 py-0.5 font-mono text-xs dark:bg-elev2">{x.emp_code}</code></td>
                   <td className={tdCls}>{x.name}</td><td className={tdCls}>{x.department}</td>
                   <td className={tdCls}><span className="font-medium text-amber-700 dark:text-amber-400">{x.total_late_minutes}</span></td>
                   <td className={tdCls}>{x.late_count}</td>
@@ -561,7 +561,7 @@ function Trend() {
                   <td className={tdCls}>{x.date}</td><td className={tdCls}>{x.is_working_day ? 'yes' : 'no'}</td><td className={tdCls}>{x.headcount}</td>
                   <td className={tdCls}>{x.present_count}</td><td className={tdCls}>{x.late_count}</td>
                   <td className={tdCls}>{x.attendance_rate ?? '—'}</td><td className={tdCls}>{x.moving_avg_7d ?? '—'}</td>
-                  <td className={tdCls}><div className="h-2 w-24 rounded bg-wash dark:bg-elev2"><div className="h-2 rounded bg-olive-500" style={{ width: `${((x.attendance_rate ?? 0) / max) * 100}%` }} /></div></td>
+                  <td className={tdCls}><div className="h-2 w-24 rounded bg-wash dark:bg-elev2"><div className="h-2 rounded bg-brand-500" style={{ width: `${((x.attendance_rate ?? 0) / max) * 100}%` }} /></div></td>
                 </tr>
               ))}
             </tbody>
@@ -616,7 +616,7 @@ function ThemeToggle() {
       onClick={cycle}
       aria-label={label}
       title={label}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line2 bg-white text-fog hover:bg-cream dark:border-edg dark:bg-elev dark:text-ash dark:hover:bg-elev2"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line2 bg-white text-fog hover:bg-wash dark:border-edg dark:bg-elev dark:text-ash dark:hover:bg-elev2"
     >
       <Icon className="h-4 w-4" aria-hidden />
     </button>
@@ -637,8 +637,7 @@ export default function App() {
         Skip to content
       </a>
       <div className="flex min-h-screen flex-col md:flex-row">
-        {/* Sidebar / top bar */}
-        <aside className="border-b border-line bg-side md:flex md:w-64 md:shrink-0 md:flex-col md:border-b-0 md:border-r dark:border-edg dark:bg-elev">
+        <aside className="border-b border-line bg-white md:flex md:w-64 md:shrink-0 md:flex-col md:border-b-0 md:border-r dark:border-edg dark:bg-elev">
           <div className="flex items-center gap-2 p-4">
             <div className="flex min-w-0 items-center gap-2.5">
               <img src="/attendx.svg" alt="AttendX logo" width="34" height="34" className="shrink-0" />
@@ -657,9 +656,8 @@ export default function App() {
           </nav>
         </aside>
 
-        {/* Main column */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-side/70 px-4 py-3 sm:px-6 lg:px-8 dark:border-edg dark:bg-elev/60">
+          <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-white/70 px-4 py-3 sm:px-6 lg:px-8 dark:border-edg dark:bg-elev/60">
             <div className="min-w-0">
               <h1 className="truncate text-lg font-semibold text-ink dark:text-bone">{tab}</h1>
               <p className="truncate text-xs text-fog dark:text-ash">{NAV.find((n) => n.id === tab)?.blurb}</p>

@@ -18,9 +18,9 @@ function resolve(mode) {
 
 function stored() {
   try {
-    return localStorage.getItem(KEY) || 'system';
+    return localStorage.getItem(KEY) || 'light';
   } catch {
-    return 'system';
+    return 'light';
   }
 }
 
